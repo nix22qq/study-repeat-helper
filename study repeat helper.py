@@ -61,7 +61,7 @@ class SpreadsheetModel(QAbstractTableModel):
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:
             base_row = index.row()
-            target_rows = [base_row + offset for offset in [0, 2, 6, 13, 29, 59]]
+            target_rows = [base_row + offset for offset in [0,1, 3, 7, 14, 30, 60]]
             for row in target_rows:
                 if row < self.rowCount():
                     if row == base_row:
