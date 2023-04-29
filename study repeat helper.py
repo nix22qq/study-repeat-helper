@@ -10,25 +10,29 @@ from PyQt5.QtWidgets import QFileDialog
 
 
 def save_data(model):
-    file_name, _ = QFileDialog.getSaveFileName(None, "Save File", "", "CSV Files (*.csv);;All Files (*)")
-    if file_name:
-        with open(file_name, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            for row in range(model.rowCount()):
-                row_data = []
-                for column in range(model.columnCount()):
-                    cell_value = model.index(row, column).data()
-                    row_data.append(cell_value)
-                writer.writerow(row_data)
+    def _save_data():
+        file_name, _ = QFileDialog.getSaveFileName(None, "Save File", "", "CSV Files (*.csv);;All Files (*)")
+        if file_name:
+            with open(file_name, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                for row in range(model.rowCount()):
+                    row_data = []
+                    for column in range(model.columnCount()):
+                        cell_value = model.index(row, column).data()
+                        row_data.append(cell_value)
+                    writer.writerow(row_data)
+    return _save_data
 
 
 def load_data(model):
-    file_name, _ = QFileDialog.getOpenFileName(None, "Open File", "", "CSV Files (*.csv);;All Files (*)")
-    if file_name:
-        with open(file_name, mode='r') as file:
-            reader = csv.reader(file)
-            data = list(reader)
-            model.set_data(data)
+    def _load_data():
+        file_name, _ = QFileDialog.getOpenFileName(None, "Open File", "", "CSV Files (*.csv);;All Files (*)")
+        if file_name:
+            with open(file_name, mode='r') as file:
+                reader = csv.reader(file)
+                data = list(reader)
+                model.set_data(data)
+    return _load_data
 
 
 class SpreadsheetModel(QAbstractTableModel):
@@ -60,13 +64,17 @@ class SpreadsheetModel(QAbstractTableModel):
             target_rows = [base_row + offset for offset in [0, 2, 6, 13, 29, 59]]
             for row in target_rows:
                 if row < self.rowCount():
-                    existing_value = self.data.get((row, index.column()), "")
-                    new_value = existing_value + value
-                    self.data[(row, index.column())] = new_value
+                    if row == base_row:
+                        self.data[(row, index.column())] = value
+                    else:
+                        existing_value = self.data.get((row, index.column()), "")
+                        new_value = existing_value + value
+                        self.data[(row, index.column())] = new_value
                     self.dataChanged.emit(self.createIndex(row, index.column()),
-                                          self.createIndex(row, index.column()))
+                                        self.createIndex(row, index.column()))
             return True
         return False
+
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
@@ -75,6 +83,12 @@ class SpreadsheetModel(QAbstractTableModel):
             elif orientation == Qt.Vertical:
                 return f"열 {section + 1}"
         return None
+    
+    def set_data(self, data):
+        for row, row_data in enumerate(data):
+            for column, cell_value in enumerate(row_data):
+                index = self.createIndex(row, column)
+                self.setData(index, cell_value, Qt.EditRole)
 
 
 
@@ -84,7 +98,7 @@ def main():
     
    
     view = QTableView()
-    model = SpreadsheetModel(10000, 10000)
+    model = SpreadsheetModel(100, 100)
     view.setModel(model)
     view.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
     view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
@@ -94,8 +108,8 @@ def main():
     open_button = QPushButton("열기")
 
 
-    save_button.clicked.connect(save_data)
-    open_button.clicked.connect(load_data)
+    save_button.clicked.connect(save_data(model))
+    open_button.clicked.connect(load_data(model))
 
 
     button_layout = QHBoxLayout()
